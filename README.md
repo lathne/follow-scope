@@ -22,26 +22,6 @@ It supports:
 3. Optionally load an older ZIP to compare unfollow updates.
 4. Click **Analyze**.
 
-## Deploy for free on GitHub Pages (beginner step-by-step)
-
-1. Push this project to your GitHub repository.
-2. In GitHub, open your repository.
-3. Go to **Settings**.
-4. In the left menu, click **Pages**.
-5. In **Build and deployment**:
-   - **Source**: `Deploy from a branch`
-   - **Branch**: choose your branch (usually `main`)
-   - **Folder**: `/ (root)`
-6. Click **Save**.
-7. Wait ~1–3 minutes for deployment.
-8. Refresh the Pages settings and open the site URL (example: `https://YOUR_USERNAME.github.io/exported-intag-file/`).
-
-## Open from iPhone, Android, and desktop
-
-- Open the GitHub Pages URL in Safari/Chrome/Firefox.
-- Works on mobile and desktop because it is a responsive static web app.
-- Optional: add to home screen from mobile browser menu.
-
 ## How to use
 
 1. **Current export ZIP**: upload latest Instagram export ZIP.
