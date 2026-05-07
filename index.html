@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Follow Scope</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <main class="container">
+      <h1>Follow Scope</h1>
+      <p class="lead">Analyze Instagram exported ZIP files directly in your browser.</p>
+
+      <section class="card">
+        <h2>1) Load Exports</h2>
+        <label>Current export ZIP
+          <input id="currentZip" type="file" accept=".zip" />
+        </label>
+        <label>Previous export ZIP (optional, for unfollow updates)
+          <input id="previousZip" type="file" accept=".zip" />
+        </label>
+        <div class="row">
+          <button id="analyzeBtn" type="button">Analyze</button>
+          <button id="clearBtn" type="button" class="secondary">Clear saved local data</button>
+        </div>
+        <p class="hint">Data is processed locally and can be saved in your browser (free localStorage).</p>
+      </section>
+
+      <section class="card">
+        <h2>2) Optional account alias map (renamed username)</h2>
+        <p class="hint">Use one rule per line: <code>old_username = new_username</code> or <code>old_username -&gt; new_username</code>.</p>
+        <textarea id="aliasInput" rows="5" placeholder="lauratn.books = alauraeoslivros"></textarea>
+      </section>
+
+      <section class="card">
+        <h2>3) Optional follower count map (for &lt;20k / &lt;5k / &lt;1k filters)</h2>
+        <p class="hint">Use one rule per line: <code>username,12345</code> or <code>username = 12345</code>.</p>
+        <textarea id="countInput" rows="6" placeholder="example_user,18200"></textarea>
+      </section>
+
+      <section id="status" class="card status" aria-live="polite">Ready.</section>
+
+      <section class="card">
+        <h2>Results</h2>
+        <div id="results"></div>
+      </section>
+    </main>
+  </body>
+</html>
