@@ -87,8 +87,8 @@ function normalizeUsername(username) {
     .replace(/^@/, "");
 }
 
-function isLikelyInstagramUsername(value) {
-  return /^[a-z0-9._]{1,30}$/.test(normalizeUsername(value));
+function isLikelyInstagramUsername(normalizedValue) {
+  return /^[a-z0-9._]{1,30}$/.test(String(normalizedValue || ""));
 }
 
 function parseAliasMap(text) {
