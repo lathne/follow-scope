@@ -87,6 +87,10 @@ function normalizeUsername(username) {
     .replace(/^@/, "");
 }
 
+function isLikelyInstagramUsername(normalizedValue) {
+  return /^[a-z0-9._]{1,30}$/.test(String(normalizedValue || ""));
+}
+
 function parseAliasMap(text) {
   const map = new Map();
   text
@@ -121,7 +125,7 @@ function parseCountMap(text) {
     .forEach((line) => {
       const parts = line.split(/(?:,|=|;|\|)/).map((p) => p.trim());
       if (parts.length >= 2) {
-        const username = normalizeUsername(parts[0]);
+        const username = normalizeCountKey(parts[0]);
         const count = Number(String(parts[1]).replace(/[^\d]/g, ""));
         if (username && Number.isFinite(count)) {
           map.set(username, count);
@@ -129,6 +133,12 @@ function parseCountMap(text) {
       }
     });
   return map;
+}
+
+function normalizeCountKey(rawKey) {
+  const normalized = normalizeUsername(rawKey);
+  if (isLikelyInstagramUsername(normalized)) return normalized;
+  return usernameFromUrl(rawKey);
 }
 
 async function parseZipSnapshot(file, aliasMap) {
@@ -196,24 +206,39 @@ function parseUsernamesFromJson(text) {
 
   const collectFromEntry = (entry) => {
     if (!entry || typeof entry !== "object") return;
-    if (typeof entry.title === "string" && entry.title.trim()) {
-      usernames.push(entry.title);
-    }
+    let extractedAny = false;
 
     const list = Array.isArray(entry.string_list_data) ? entry.string_list_data : [];
     for (const item of list) {
-      if (item?.value) usernames.push(item.value);
-      else if (item?.href) {
-        const extracted = usernameFromUrl(item.href);
-        if (extracted) usernames.push(extracted);
+      const normalizedValue = normalizeUsername(item?.value);
+      if (normalizedValue && isLikelyInstagramUsername(normalizedValue)) {
+        usernames.push(normalizedValue);
+        extractedAny = true;
       }
+      const extracted = usernameFromUrl(item?.href || "");
+      if (extracted) {
+        usernames.push(extracted);
+        extractedAny = true;
+      }
+    }
+
+    const normalizedTitle = normalizeUsername(entry?.title);
+    if (!extractedAny && normalizedTitle && isLikelyInstagramUsername(normalizedTitle)) {
+      usernames.push(normalizedTitle);
     }
   };
 
   if (Array.isArray(json)) {
     json.forEach(collectFromEntry);
-  } else if (Array.isArray(json.relationships_following)) {
-    json.relationships_following.forEach(collectFromEntry);
+  } else {
+    [
+      "relationships_following",
+      "relationships_followers",
+      "relationships_follow_requests_sent",
+      "relationships_follow_requests_received"
+    ].forEach((key) => {
+      if (Array.isArray(json[key])) json[key].forEach(collectFromEntry);
+    });
   }
 
   return dedupe(usernames);
@@ -230,8 +255,27 @@ function parseUsernamesFromHtml(text) {
 }
 
 function usernameFromUrl(url) {
-  const match = String(url).match(/instagram\.com\/(?:_u\/)?([^/?#]+)/i);
-  return match ? normalizeUsername(match[1]) : "";
+  const raw = String(url || "").trim();
+  const match = raw.match(/instagram\.com\/(?:_u\/)?([^/?#]+)/i);
+  if (!match) return "";
+  const candidate = normalizeUsername(match[1]);
+  if (!isLikelyInstagramUsername(candidate)) return "";
+
+  const blockedPaths = new Set([
+    "p",
+    "reel",
+    "reels",
+    "stories",
+    "explore",
+    "accounts",
+    "about",
+    "legal",
+    "developer",
+    "tv",
+    "api",
+    "graphql"
+  ]);
+  return blockedPaths.has(candidate) ? "" : candidate;
 }
 
 function dedupe(list) {
@@ -244,7 +288,13 @@ function buildAnalysis(current, previous, countMap) {
 
   const notFollowingBack = [...currentFollowing].filter((u) => !currentFollowers.has(u)).sort();
 
-  const withCount = (threshold) =>
+  const withCountBetween = (minExclusive, maxExclusive) =>
+    notFollowingBack
+      .filter((u) => countMap.has(u))
+      .map((u) => ({ username: u, followersCount: countMap.get(u) }))
+      .filter((x) => x.followersCount > minExclusive && x.followersCount < maxExclusive);
+
+  const withCountUnder = (threshold) =>
     notFollowingBack
       .filter((u) => countMap.has(u) && countMap.get(u) < threshold)
       .map((u) => ({ username: u, followersCount: countMap.get(u) }));
@@ -265,9 +315,9 @@ function buildAnalysis(current, previous, countMap) {
       previousLoaded: Boolean(previous)
     },
     notFollowingBack,
-    under20k: withCount(20000),
-    under5k: withCount(5000),
-    under1k: withCount(1000),
+    between5kAnd20k: withCountBetween(5000, 20000),
+    between1kAnd5k: withCountBetween(1000, 5000),
+    under1k: withCountUnder(1000),
     unknownCounts,
     unfollowedSinceUpdate
   };
@@ -294,8 +344,8 @@ function renderResults(analysis) {
       </p>
     </div>
     ${block("Accounts I follow but do not follow me", analysis.notFollowingBack, (u) => `<a target='_blank' href='https://www.instagram.com/${encodeURIComponent(u)}'>@${escapeHtml(u)}</a>`) }
-    ${block("Accounts I follow but do not follow me (< 20k followers)", analysis.under20k, (x) => `<a target='_blank' href='https://www.instagram.com/${encodeURIComponent(x.username)}'>@${escapeHtml(x.username)}</a> (${x.followersCount})`) }
-    ${block("Accounts I follow but do not follow me (< 5k followers)", analysis.under5k, (x) => `<a target='_blank' href='https://www.instagram.com/${encodeURIComponent(x.username)}'>@${escapeHtml(x.username)}</a> (${x.followersCount})`) }
+    ${block("Accounts I follow but do not follow me (> 5k and < 20k followers)", analysis.between5kAnd20k, (x) => `<a target='_blank' href='https://www.instagram.com/${encodeURIComponent(x.username)}'>@${escapeHtml(x.username)}</a> (${x.followersCount})`) }
+    ${block("Accounts I follow but do not follow me (> 1k and < 5k followers)", analysis.between1kAnd5k, (x) => `<a target='_blank' href='https://www.instagram.com/${encodeURIComponent(x.username)}'>@${escapeHtml(x.username)}</a> (${x.followersCount})`) }
     ${block("Accounts I follow but do not follow me (< 1k followers)", analysis.under1k, (x) => `<a target='_blank' href='https://www.instagram.com/${encodeURIComponent(x.username)}'>@${escapeHtml(x.username)}</a> (${x.followersCount})`) }
     ${block("Accounts that unfollowed me since last update", analysis.unfollowedSinceUpdate, (u) => `<a target='_blank' href='https://www.instagram.com/${encodeURIComponent(u)}'>@${escapeHtml(u)}</a>`) }
     ${block("Missing follower count data for filtered lists", analysis.unknownCounts, (u) => `@${escapeHtml(u)}`) }
