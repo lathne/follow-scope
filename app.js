@@ -210,8 +210,9 @@ function parseUsernamesFromJson(text) {
 
     const list = Array.isArray(entry.string_list_data) ? entry.string_list_data : [];
     for (const item of list) {
-      if (item?.value && isLikelyInstagramUsername(item.value)) {
-        usernames.push(item.value);
+      const normalizedValue = normalizeUsername(item?.value);
+      if (normalizedValue && isLikelyInstagramUsername(normalizedValue)) {
+        usernames.push(normalizedValue);
         extractedAny = true;
       }
       const extracted = usernameFromUrl(item?.href || "");
@@ -221,8 +222,9 @@ function parseUsernamesFromJson(text) {
       }
     }
 
-    if (!extractedAny && isLikelyInstagramUsername(entry.title)) {
-      usernames.push(entry.title);
+    const normalizedTitle = normalizeUsername(entry?.title);
+    if (!extractedAny && normalizedTitle && isLikelyInstagramUsername(normalizedTitle)) {
+      usernames.push(normalizedTitle);
     }
   };
 
