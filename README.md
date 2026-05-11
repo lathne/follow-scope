@@ -4,7 +4,7 @@ Follow Scope is a free browser app to analyze Instagram export ZIP files.
 
 It supports:
 - Accounts that you follow but do not follow you back
-- The same list filtered by account follower count (<20k, <5k, <1k)
+- The same list filtered by account follower count (>5k and <20k, >1k and <5k, <1k)
 - Accounts that unfollowed you since your last export update
 - Username rename handling across exports (alias mapping)
 - Free local storage in your browser (`localStorage`)
@@ -28,8 +28,9 @@ It supports:
 2. **Previous export ZIP** (optional): upload older export to detect unfollow updates.
 3. **Alias map** (optional): if username changed, add lines like:
    - `old_username = new_username`
-4. **Follower count map** (optional): for `<20k`, `<5k`, `<1k` filters, add lines like:
+4. **Follower count map** (optional): for `>5k and <20k`, `>1k and <5k`, `<1k` filters, add lines like:
    - `username,12345`
+   - `https://www.instagram.com/username,12345`
 5. Click **Analyze**.
 
 ## Free data storage
